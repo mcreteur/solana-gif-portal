@@ -1,10 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import twitterLogo from './assets/twitter-logo.svg';
 import './App.css';
-
-// Constants
-const TWITTER_HANDLE = '_buildspace';
-const TWITTER_LINK = `https://twitter.com/${TWITTER_HANDLE}`;
+import { Footer } from './Footer';
+import { PhantomResponse } from './types';
 
 const TEST_GIFS = [
 	'https://i.giphy.com/media/eIG0HfouRQJQr1wBzz/giphy.webp',
@@ -15,8 +12,8 @@ const TEST_GIFS = [
 
 const App = () => {
 
-  const [walletAddress, setWalletAddress] = useState(null);
-  const [inputValue, setInputValue] = useState('');
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [inputValue, setInputValue] = useState<string>('');
   const [gifList, setGifList] = useState<string[]>([]);
   
     /*
@@ -25,7 +22,7 @@ const App = () => {
    */
     const checkIfWalletIsConnected = async () => {
       try {
-        const solanaProvider = (window as any).solana;
+        const solanaProvider = window.solana;
   
         if (solanaProvider && solanaProvider.isPhantom) {
             console.log('Phantom wallet found!');
@@ -38,10 +35,10 @@ const App = () => {
     };
 
     const connectWallet = async () => {
-      const solana = (window as any).solana;
+      const solanaProvider = window.solana;
   
-      if (solana) {
-        const response = await solana.connect({ onlyIfTrusted: true });
+      if (solanaProvider) {
+        const response: PhantomResponse = await solanaProvider.connect({ onlyIfTrusted: true });
         console.log('Connected with Public Key:', response.publicKey.toString());
         setWalletAddress(response.publicKey.toString());
       }
@@ -120,15 +117,7 @@ const App = () => {
           {!walletAddress && renderNotConnectedContainer()}
           {walletAddress && renderConnectedContainer()}
         </div>
-        <div className="footer-container">
-          <img alt="Twitter Logo" className="twitter-logo" src={twitterLogo} />
-          <a
-            className="footer-text"
-            href={TWITTER_LINK}
-            target="_blank"
-            rel="noreferrer"
-          >{`built on @${TWITTER_HANDLE}`}</a>
-        </div>
+        <Footer />
       </div>
     </div>
   );
