@@ -37,9 +37,10 @@ describe('gif-storage', () => {
   it('Updates gif storage counter', async () => {
     console.log('Updating total Gifs...');
    // Call add_gif!
-    await program.rpc.addGif({
-    accounts: {
-      baseAccount: baseAccount.publicKey,
+    await program.rpc.addGif("gif_test_link", {
+      accounts: {
+        baseAccount: baseAccount.publicKey,
+        user: provider.wallet.publicKey,
       },
     });
   
@@ -47,6 +48,8 @@ describe('gif-storage', () => {
     let totalGifs = account.totalGifs;
     console.log('👀 GIF Count', totalGifs.toString());
     assert(totalGifs.toNumber() == 1);
+
+    console.log('👀 GIF List', account.gifList)
   });
 
 });
