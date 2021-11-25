@@ -1,11 +1,11 @@
-[programs.localnet]
-gif_storage = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+[programs.devnet]
+gif_storage = "DCmY7MUPZha2Z349ipoJPmAud93K2sfdJSnVHG6xXNFN"
 
 [registry]
 url = "https://anchor.projectserum.com"
 
 [provider]
-cluster = "localnet"
+cluster = "devnet"
 wallet = "/home/mcreteur/.config/solana/id.json"
 
 [scripts]
