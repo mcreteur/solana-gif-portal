@@ -17,14 +17,12 @@ const App = () => {
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
   const [gifList, setGifList] = useState<GifItemType[] | null>(null);
-
+  
   const idl: any = rawIdl;
-
+  
   // SystemProgram is a reference to the Solana runtime!
   const { SystemProgram, Keypair } = web3;
-
-  // Create a keypair for the account that will hold the GIF data.
-  let baseAccount = Keypair.generate();
+  const [baseAccountKeyPair, setBaseAccountKeyPair] = useState<web3.Keypair | null>(null);
 
   // Get our program's id from the IDL file.
   const programID = new PublicKey(idl.metadata.address);
@@ -63,6 +61,8 @@ const App = () => {
         const response: PhantomResponse = await solanaProvider.connect({ onlyIfTrusted: true });
         console.log('Connected with Public Key:', response.publicKey.toString());
         setWalletAddress(response.publicKey.toString());
+
+        setBaseAccountKeyPair(web3.Keypair.generate());
       }
     };
 
@@ -80,30 +80,51 @@ const App = () => {
     }
 
     const createGifAccount = async () => {
-      try {
-        const provider = getProvider();
-        const program = new Program(idl, programID, provider);
-        await program.rpc.initialize({
-          accounts: {
-            baseAccount: baseAccount.publicKey,
-            user: provider.wallet.publicKey,
-            systemProgram: SystemProgram.programId,
-          },
-          signers: [baseAccount]
-        });
-        console.log("Created a new BaseAccount w/ address:", baseAccount.publicKey.toString())
-        await getGifList();
-    
-      } catch(error) {
-        console.log("Error creating BaseAccount account:", error)
+      if (baseAccountKeyPair != null) {
+        try {
+          const provider = getProvider();
+          const program = new Program(idl, programID, provider);
+          await program.rpc.initialize({
+            accounts: {
+              baseAccount: baseAccountKeyPair.publicKey,
+              user: provider.wallet.publicKey,
+              systemProgram: SystemProgram.programId,
+            },
+            signers: [baseAccountKeyPair]
+          });
+          console.log("Created a new BaseAccount w/ address:", baseAccountKeyPair.publicKey.toString())
+          await getGifList();
+      
+        } catch(error) {
+          console.log("Error creating BaseAccount account:", error)
+        }
       }
     }
 
     const sendGif = async () => {
-      if (inputValue.length > 0) {
-        console.log('Gif link:', inputValue);
-      } else {
-        console.log('Empty input. Try again.');
+      if (inputValue.length === 0) {
+        console.log("No gif link given!")
+        return
+      }
+      console.log('Gif link:', inputValue);
+
+      if (baseAccountKeyPair != null) {
+        try {
+          const provider = getProvider();
+          const program = new Program(idl, programID, provider);
+      
+          await program.rpc.addGif(inputValue, {
+            accounts: {
+              baseAccount: baseAccountKeyPair.publicKey,
+              user: provider.wallet.publicKey,
+            },
+          });
+          console.log("GIF successfully sent to program", inputValue)
+      
+          await getGifList();
+        } catch (error) {
+          console.log("Error sending GIF:", error)
+        }
       }
     };
   
@@ -168,17 +189,19 @@ const App = () => {
     }, []);
 
     const getGifList = async() => {
-      try {
-        const provider = getProvider();
-        const program = new Program(idl, programID, provider);
-        const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
-        
-        console.log("Got the account", account)
-        setGifList(account.gifList)
-    
-      } catch (error) {
-        console.log("Error in getGifList: ", error)
-        setGifList(null);
+      if (baseAccountKeyPair != null) {
+        try {
+          const provider = getProvider();
+          const program = new Program(idl, programID, provider);
+          const account = await program.account.baseAccount.fetch(baseAccountKeyPair.publicKey);
+          
+          console.log("Got the account", account)
+          setGifList(account.gifList)
+      
+        } catch (error) {
+          console.log("Error in getGifList: ", error)
+          setGifList(null);
+        }
       }
     }
 
