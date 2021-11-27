@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
+import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
+import { Program, Provider, web3 } from '@project-serum/anchor';
 import './App.css';
 import { Footer } from './Footer';
 import { PhantomResponse } from './types';
 import rawIdl from './solana-program-idl/gif_storage.json';
-import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
-import { Idl, Program, Provider, web3 } from '@project-serum/anchor';
+import keyPair from './utilities/keypair.json';
 
 type GifItemType = {
   gifLink: string
 }
-
-
 
 const App = () => {
 
@@ -21,8 +20,7 @@ const App = () => {
   const idl: any = rawIdl;
   
   // SystemProgram is a reference to the Solana runtime!
-  const { SystemProgram, Keypair } = web3;
-  const [baseAccountKeyPair, setBaseAccountKeyPair] = useState<web3.Keypair | null>(null);
+  const { SystemProgram } = web3;
 
   // Get our program's id from the IDL file.
   const programID = new PublicKey(idl.metadata.address);
@@ -35,7 +33,10 @@ const App = () => {
     preflightCommitment: "processed"
   }
 
-  
+  const arr = Object.values(keyPair._keypair.secretKey)
+  const secret = new Uint8Array(arr)
+  const baseAccount = web3.Keypair.fromSecretKey(secret)
+
     /*
    * This function holds the logic for deciding if a Phantom Wallet is
    * connected or not
@@ -61,8 +62,6 @@ const App = () => {
         const response: PhantomResponse = await solanaProvider.connect({ onlyIfTrusted: true });
         console.log('Connected with Public Key:', response.publicKey.toString());
         setWalletAddress(response.publicKey.toString());
-
-        setBaseAccountKeyPair(web3.Keypair.generate());
       }
     };
 
@@ -80,25 +79,23 @@ const App = () => {
     }
 
     const createGifAccount = async () => {
-      if (baseAccountKeyPair != null) {
         try {
           const provider = getProvider();
           const program = new Program(idl, programID, provider);
           await program.rpc.initialize({
             accounts: {
-              baseAccount: baseAccountKeyPair.publicKey,
+              baseAccount: baseAccount.publicKey,
               user: provider.wallet.publicKey,
               systemProgram: SystemProgram.programId,
             },
-            signers: [baseAccountKeyPair]
+            signers: [baseAccount]
           });
-          console.log("Created a new BaseAccount w/ address:", baseAccountKeyPair.publicKey.toString())
+          console.log("Created a new BaseAccount w/ address:", baseAccount.publicKey.toString())
           await getGifList();
       
         } catch(error) {
           console.log("Error creating BaseAccount account:", error)
         }
-      }
     }
 
     const sendGif = async () => {
@@ -108,14 +105,13 @@ const App = () => {
       }
       console.log('Gif link:', inputValue);
 
-      if (baseAccountKeyPair != null) {
         try {
           const provider = getProvider();
           const program = new Program(idl, programID, provider);
       
           await program.rpc.addGif(inputValue, {
             accounts: {
-              baseAccount: baseAccountKeyPair.publicKey,
+              baseAccount: baseAccount.publicKey,
               user: provider.wallet.publicKey,
             },
           });
@@ -125,7 +121,6 @@ const App = () => {
         } catch (error) {
           console.log("Error sending GIF:", error)
         }
-      }
     };
   
     const renderNotConnectedContainer = () => (
@@ -171,7 +166,7 @@ const App = () => {
             <div className="gif-grid">
               {gifList.map((item, index) => (
                 <div className="gif-item" key={index}>
-                  <img src={item.gifLink} />
+                  <img src={item.gifLink} alt='' />
                 </div>
               ))}
             </div>
@@ -189,11 +184,10 @@ const App = () => {
     }, []);
 
     const getGifList = async() => {
-      if (baseAccountKeyPair != null) {
         try {
           const provider = getProvider();
           const program = new Program(idl, programID, provider);
-          const account = await program.account.baseAccount.fetch(baseAccountKeyPair.publicKey);
+          const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
           
           console.log("Got the account", account)
           setGifList(account.gifList)
@@ -202,7 +196,6 @@ const App = () => {
           console.log("Error in getGifList: ", error)
           setGifList(null);
         }
-      }
     }
 
     useEffect(() => {
@@ -212,6 +205,7 @@ const App = () => {
         // Call Solana program here.
         getGifList()
       }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [walletAddress]);
 
   return (
