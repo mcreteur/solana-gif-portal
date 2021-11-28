@@ -3,9 +3,9 @@ import { Connection, PublicKey, clusterApiUrl } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import './App.css';
 import { Footer } from './Footer';
-import { PhantomResponse } from './types';
 import rawIdl from './solana-program-idl/gif_storage.json';
 import keyPair from './utilities/keypair.json';
+import usePhantom from './hooks/usePhantom';
 
 type GifItemType = {
   gifLink: string
@@ -13,9 +13,9 @@ type GifItemType = {
 
 const App = () => {
 
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState<string>('');
   const [gifList, setGifList] = useState<GifItemType[] | null>(null);
+  const { connectWallet, walletAddress } = usePhantom();
   
   const idl: any = rawIdl;
   
@@ -36,34 +36,6 @@ const App = () => {
   const arr = Object.values(keyPair._keypair.secretKey)
   const secret = new Uint8Array(arr)
   const baseAccount = web3.Keypair.fromSecretKey(secret)
-
-    /*
-   * This function holds the logic for deciding if a Phantom Wallet is
-   * connected or not
-   */
-    const checkIfWalletIsConnected = async () => {
-      try {
-        const solanaProvider = window.solana;
-  
-        if (solanaProvider && solanaProvider.isPhantom) {
-            console.log('Phantom wallet found!');
-        } else {
-          alert('Solana object not found! Get a Phantom Wallet 👻');
-        }
-      } catch (error) {
-        console.error(error);
-      }
-    };
-
-    const connectWallet = async () => {
-      const solanaProvider = window.solana;
-  
-      if (solanaProvider) {
-        const response: PhantomResponse = await solanaProvider.connect({ onlyIfTrusted: true });
-        console.log('Connected with Public Key:', response.publicKey.toString());
-        setWalletAddress(response.publicKey.toString());
-      }
-    };
 
     const onInputChange = (event: any) => {
       const { value } = event.target;
@@ -174,14 +146,6 @@ const App = () => {
         )
       }
     }
-
-    useEffect(() => {
-      const onLoad = async () => {
-        await checkIfWalletIsConnected();
-      };
-      window.addEventListener('load', onLoad);
-      return () => window.removeEventListener('load', onLoad);
-    }, []);
 
     const getGifList = async() => {
         try {
